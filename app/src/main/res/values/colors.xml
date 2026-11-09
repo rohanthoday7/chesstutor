@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="chess_green_primary">#81B64C</color>
+    <color name="chess_green_dark">#6CA23C</color>
+    <color name="chess_bg_dark">#302E2B</color>
+    <color name="chess_card_dark">#262421</color>
+    <color name="chess_board_light">#EBECD0</color>
+    <color name="chess_board_dark">#739552</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
+

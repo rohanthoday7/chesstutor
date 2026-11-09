@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Chessable</string>
+    <string name="play">Play</string>
+    <string name="puzzles">Puzzles</string>
+    <string name="learn">Learn</string>
+    <string name="social">Social</string>
+    <string name="profile">Profile</string>
+    <string name="play_online">Play Online</string>
+    <string name="play_bots">Play Computer</string>
+    <string name="pass_and_play">Pass &amp; Play</string>
+    <string name="puzzle_rush">Puzzle Rush</string>
+    <string name="daily_puzzle">Daily Puzzle</string>
+    <string name="chess_dna">Chess DNA</string>
+    <string name="game_review">Game Review</string>
+    <string name="opening_explorer">Openings</string>
+    <string name="leaderboard">Leaderboard</string>
+    <string name="friends">Friends</string>
+    <string name="settings">Settings</string>
+</resources>
+
