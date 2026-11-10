@@ -10,7 +10,6 @@ import com.chesstutor.core.chess.PieceType
 import com.chesstutor.core.chess.Square
 import com.chesstutor.data.local.GameArchiveRepository
 import com.chesstutor.data.local.OfflinePuzzle
-import com.chesstutor.data.remote.ApiClient
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +30,7 @@ data class PuzzleUiState(
     val rating: Int = 1200,
     val description: String = "Find the best move for White",
     val gameState: ChessGameState = ChessGameState.initial(),
+    val initialGameState: ChessGameState = ChessGameState.initial(),
     val selectedSquare: Square? = null,
     val legalMovesForSelected: List<Move> = emptyList(),
     val pendingPromotionMove: Pair<Square, Square>? = null,
@@ -63,27 +63,11 @@ class PuzzleViewModel : ViewModel() {
         _uiState.update { it.copy(isLoading = true, mode = PuzzleMode.DAILY) }
         viewModelScope.launch {
             try {
-                val response = ApiClient.chessComApi.getDailyPuzzle()
-                val parsedState = ChessRules.fromFen(response.fen)
-                val moves = extractMovesFromPgn(response.pgn)
-
-                _uiState.update {
-                    it.copy(
-                        title = response.title.ifBlank { "Daily Puzzle" },
-                        rating = 1450,
-                        description = "Find the winning continuation",
-                        gameState = parsedState,
-                        solutionMoves = moves,
-                        currentSolutionStep = 0,
-                        isSolved = false,
-                        isFailed = false,
-                        isLoading = false,
-                        selectedSquare = null,
-                        legalMovesForSelected = emptyList()
-                    )
-                }
+                val puzzles = GameArchiveRepository.OFFLINE_PUZZLES
+                val dayIndex = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR)
+                val puzzle = puzzles[dayIndex % puzzles.size]
+                loadOfflinePuzzle(puzzle)
             } catch (e: Exception) {
-                // Graceful fallback to offline curated puzzles
                 loadOfflinePuzzle(GameArchiveRepository.OFFLINE_PUZZLES[0])
             }
         }
@@ -131,11 +115,24 @@ class PuzzleViewModel : ViewModel() {
                 rating = puzzle.rating,
                 description = puzzle.description,
                 gameState = state,
+                initialGameState = state,
                 solutionMoves = puzzle.solutionSans,
                 currentSolutionStep = 0,
                 isSolved = false,
                 isFailed = false,
                 isLoading = false,
+                selectedSquare = null,
+                legalMovesForSelected = emptyList()
+            )
+        }
+    }
+
+    fun retryCurrentPuzzle() {
+        _uiState.update {
+            it.copy(
+                gameState = it.initialGameState,
+                currentSolutionStep = 0,
+                isFailed = false,
                 selectedSquare = null,
                 legalMovesForSelected = emptyList()
             )
@@ -269,24 +266,6 @@ class PuzzleViewModel : ViewModel() {
                 }
             }
         }
-    }
-
-    private fun extractMovesFromPgn(pgn: String): List<String> {
-        val lines = pgn.lines()
-        val moveLines = lines.filter { !it.startsWith("[") && it.isNotBlank() }
-        val fullText = moveLines.joinToString(" ")
-        val tokens = fullText.split("\\s+".toRegex())
-
-        val moves = mutableListOf<String>()
-        for (token in tokens) {
-            if (token.contains(".") || token == "*" || token == "1-0" || token == "0-1" || token == "1/2-1/2") {
-                continue
-            }
-            if (token.isNotBlank()) {
-                moves.add(token)
-            }
-        }
-        return moves
     }
 
     override fun onCleared() {

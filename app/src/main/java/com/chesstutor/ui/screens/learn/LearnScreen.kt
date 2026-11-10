@@ -48,6 +48,8 @@ import com.chesstutor.viewmodel.TutorViewModel
 fun LearnScreen(
     viewModel: LearnViewModel,
     tutorViewModel: TutorViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    onStartTutorMatch: (com.chesstutor.core.engine.BotPersonality, com.chesstutor.core.tutor.TutorPersonality) -> Unit,
+    onStartOpeningPractice: (com.chesstutor.core.engine.OpeningEntry) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -106,7 +108,10 @@ fun LearnScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         if (selectedTopTab == 1) {
-            TutorScreen(viewModel = tutorViewModel)
+            TutorScreen(
+                viewModel = tutorViewModel,
+                onStartTutorMatch = onStartTutorMatch
+            )
         } else {
             // Openings Explorer Content
             Text(
@@ -156,6 +161,20 @@ fun LearnScreen(
                             color = ChessTextSecondary,
                             fontSize = 12.sp
                         )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Button(
+                            onClick = { onStartOpeningPractice(opening) },
+                            colors = ButtonDefaults.buttonColors(containerColor = ChessGreenPrimary),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "⚔️ Practice ${opening.name} vs Bot",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
             }

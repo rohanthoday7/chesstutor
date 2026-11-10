@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -188,16 +190,16 @@ fun PlayScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f, fill = false),
+                    .weight(1f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 EvaluationBar(
                     evaluationCentipawns = state.evaluationCentipawns,
                     isFlipped = state.isFlipped,
-                    modifier = Modifier.height(340.dp)
+                    modifier = Modifier.fillMaxHeight(0.92f)
                 )
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
                 ChessboardView(
                     board = state.gameState.board,
@@ -210,7 +212,9 @@ fun PlayScreen(
                     showCoordinates = true,
                     showLegalMoveDots = true,
                     onSquareClicked = { viewModel.onSquareClicked(it) },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(1f)
                 )
             }
 

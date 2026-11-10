@@ -44,6 +44,7 @@ data class ChessGameState(
         const val STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
         fun initial(): ChessGameState = ChessRules.fromFen(STARTING_FEN)
+        fun fromFen(fen: String): ChessGameState = ChessRules.fromFen(fen)
     }
 }
 

@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.chesstutor.core.engine.BotPersonality
 import com.chesstutor.core.tutor.MoveLesson
 import com.chesstutor.core.tutor.TutorPersonality
 import com.chesstutor.data.local.BoardTheme
@@ -55,10 +57,11 @@ import com.chesstutor.viewmodel.TutorViewModel
 @Composable
 fun TutorScreen(
     viewModel: TutorViewModel,
+    onStartTutorMatch: (BotPersonality, TutorPersonality) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
-    var selectedTab by remember { mutableStateOf(0) } // 0: Move Lessons, 1: Learned Patterns, 2: Ask Tutor
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Move Lessons, 1: Learned Patterns, 2: Ask Tutor
     var userQuestionText by remember { mutableStateOf("") }
 
     Column(
@@ -73,7 +76,7 @@ fun TutorScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Chessable AI Coach",
                     color = ChessTextPrimary,
@@ -106,6 +109,29 @@ fun TutorScreen(
                     )
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Play Live Match vs AI Tutor Button
+        Button(
+            onClick = {
+                val bot = when (state.selectedTutor.id) {
+                    "mikhail" -> BotPersonality.ALL_BOTS[4]
+                    "viktor" -> BotPersonality.ALL_BOTS[3]
+                    "lily" -> BotPersonality.ALL_BOTS[0]
+                    else -> BotPersonality.ALL_BOTS[2]
+                }
+                onStartTutorMatch(bot, state.selectedTutor)
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = ChessGreenPrimary),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "⚔️ Play Live Match vs ${state.selectedTutor.name}",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
         }
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -227,7 +253,13 @@ fun TutorScreen(
                     lessons = state.lessons,
                     activeLesson = state.activeLesson,
                     activeLessonState = state.activeLessonState,
-                    onSelectLesson = { viewModel.selectLesson(it) }
+                    lessonSelectedSquare = state.lessonSelectedSquare,
+                    lessonLegalMoves = state.lessonLegalMoves,
+                    lessonMessage = state.lessonMessage,
+                    onSelectLesson = { viewModel.selectLesson(it) },
+                    onSquareClicked = { viewModel.onLessonSquareClicked(it) },
+                    onDemonstrate = { viewModel.demonstrateLessonMove() },
+                    onReset = { viewModel.resetLesson() }
                 )
             }
             1 -> {
@@ -259,7 +291,13 @@ fun MoveLessonsTab(
     lessons: List<MoveLesson>,
     activeLesson: MoveLesson?,
     activeLessonState: com.chesstutor.core.chess.ChessGameState,
-    onSelectLesson: (MoveLesson) -> Unit
+    lessonSelectedSquare: com.chesstutor.core.chess.Square?,
+    lessonLegalMoves: List<com.chesstutor.core.chess.Move>,
+    lessonMessage: String?,
+    onSelectLesson: (MoveLesson) -> Unit,
+    onSquareClicked: (com.chesstutor.core.chess.Square) -> Unit,
+    onDemonstrate: () -> Unit,
+    onReset: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -314,12 +352,54 @@ fun MoveLessonsTab(
                         // Interactive Mini Demo Board
                         ChessboardView(
                             board = activeLessonState.board,
+                            selectedSquare = lessonSelectedSquare,
+                            legalMovesForSelected = lessonLegalMoves,
                             theme = BoardTheme.GREEN,
                             showCoordinates = true,
-                            showLegalMoveDots = false,
-                            onSquareClicked = {},
+                            showLegalMoveDots = true,
+                            onSquareClicked = { onSquareClicked(it) },
                             modifier = Modifier.fillMaxWidth()
                         )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        if (lessonMessage != null) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFF383531))
+                                    .padding(8.dp)
+                            ) {
+                                Text(
+                                    text = lessonMessage,
+                                    color = ChessYellowAccent,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = { onDemonstrate() },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF383531)),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(text = "▶ Demonstrate", fontSize = 12.sp)
+                            }
+                            Button(
+                                onClick = { onReset() },
+                                colors = ButtonDefaults.buttonColors(containerColor = ChessGreenPrimary),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(text = "🔄 Reset & Practice", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(10.dp))
                         Box(

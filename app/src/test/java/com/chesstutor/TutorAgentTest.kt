@@ -89,7 +89,7 @@ class TutorAgentTest {
         val mikhail = TutorPersonality.getById("mikhail")
 
         // 1. e4 is good
-        val e4Move = Move(Square.E2, Square.E4)
+        val e4Move = Move(Square.fromNotation("e2"), Square.fromNotation("e4"))
         val feedbackE4 = ChessTutorAgent.evaluateMove(state, e4Move, mikhail)
         assertTrue(
             feedbackE4.classification == MoveClassification.BEST ||
@@ -99,7 +99,7 @@ class TutorAgentTest {
         // Simulate hanging a queen: White moves Qd1 to e5 directly when Black pawn is on e7
         // (Wait, Qd1 to e5 is not legal from start, but let's test evaluation on a move that loses queen)
         // Set up a custom board where a queen is hung
-        val hangingQueenMove = Move(Square.D1, Square.H5)
+        val hangingQueenMove = Move(Square.fromNotation("d1"), Square.fromNotation("h5"))
         val feedbackQueen = ChessTutorAgent.evaluateMove(state, hangingQueenMove, mikhail)
         assertNotNull(feedbackQueen)
     }

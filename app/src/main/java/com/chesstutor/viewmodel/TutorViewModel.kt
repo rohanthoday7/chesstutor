@@ -3,7 +3,10 @@ package com.chesstutor.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chesstutor.core.chess.ChessGameState
+import com.chesstutor.core.chess.ChessRules
 import com.chesstutor.core.chess.Move
+import com.chesstutor.core.chess.PieceType
+import com.chesstutor.core.chess.Square
 import com.chesstutor.core.tutor.ChessTutorAgent
 import com.chesstutor.core.tutor.MoveClassification
 import com.chesstutor.core.tutor.MoveLesson
@@ -41,29 +44,11 @@ data class TutorUiState(
     val lastFeedback: TutorFeedback? = null,
     val pendingBlunderFeedback: TutorFeedback? = null,
     val showBlunderIntervention: Boolean = false,
-    val learnedPatterns: List<LearnedPattern> = listOf(
-        LearnedPattern(
-            patternName = "Hanging Minor Pieces",
-            occurrenceCount = 3,
-            severity = "High",
-            diagnosis = "Moving pieces to squares where they are targeted without adequate friendly defenders.",
-            remedy = "Before releasing any piece, scan all enemy diagonals, ranks, and knight jumps to confirm it is not loose."
-        ),
-        LearnedPattern(
-            patternName = "Delayed Castling",
-            occurrenceCount = 2,
-            severity = "Medium",
-            diagnosis = "Leaving the King on e1/e8 beyond move 10 while opening center files.",
-            remedy = "Aim to castle kingside within your first 7 to 8 moves to avoid tactical king walks."
-        ),
-        LearnedPattern(
-            patternName = "Early Queen Attacks",
-            occurrenceCount = 1,
-            severity = "Tip",
-            diagnosis = "Developing the Queen on moves 2-3 to chase checkmates, which allows the opponent to develop minor pieces with tempo.",
-            remedy = "Develop Knights and Bishops first; bring out the Queen only after pieces are coordinated."
-        )
-    ),
+    val learnedPatterns: List<LearnedPattern> = emptyList(),
+    val lessonSelectedSquare: Square? = null,
+    val lessonLegalMoves: List<Move> = emptyList(),
+    val lessonMessage: String? = "Tap a piece and make the correct move to practice!",
+    val isLessonSuccess: Boolean = false,
     val doubtChat: List<TutorChatMessage> = listOf(
         TutorChatMessage(
             sender = "GM Mikhail",
@@ -100,8 +85,119 @@ class TutorViewModel : ViewModel() {
         _uiState.update {
             it.copy(
                 activeLesson = lesson,
-                activeLessonState = ChessGameState.fromFen(lesson.demoFen)
+                activeLessonState = ChessGameState.fromFen(lesson.demoFen),
+                lessonSelectedSquare = null,
+                lessonLegalMoves = emptyList(),
+                lessonMessage = "Tap a piece and make the correct move to practice!",
+                isLessonSuccess = false
             )
+        }
+    }
+
+    fun resetLesson() {
+        val lesson = _uiState.value.activeLesson ?: return
+        _uiState.update {
+            it.copy(
+                activeLessonState = ChessGameState.fromFen(lesson.demoFen),
+                lessonSelectedSquare = null,
+                lessonLegalMoves = emptyList(),
+                lessonMessage = "Try making the move yourself!",
+                isLessonSuccess = false
+            )
+        }
+    }
+
+    fun demonstrateLessonMove() {
+        val state = _uiState.value
+        val lesson = state.activeLesson ?: return
+        val startState = ChessGameState.fromFen(lesson.demoFen)
+        val move = getDemoMoveForLesson(lesson.id)
+        if (move != null) {
+            val nextState = ChessRules.makeMove(startState, move)
+            _uiState.update {
+                it.copy(
+                    activeLessonState = nextState,
+                    lessonSelectedSquare = null,
+                    lessonLegalMoves = emptyList(),
+                    lessonMessage = "🤖 Coach demonstrated the move! Tap 'Reset' to practice it yourself.",
+                    isLessonSuccess = true
+                )
+            }
+        }
+    }
+
+    fun onLessonSquareClicked(square: Square) {
+        val state = _uiState.value
+        val lesson = state.activeLesson ?: return
+
+        // If already successful, tapping a piece auto-resets so the user can practice again instantly
+        if (state.isLessonSuccess) {
+            resetLesson()
+            val newState = _uiState.value
+            val piece = newState.activeLessonState.board[square]
+            if (piece != null && piece.color == newState.activeLessonState.turn) {
+                val legal = ChessRules.getLegalMovesForSquare(newState.activeLessonState, square)
+                _uiState.update { it.copy(lessonSelectedSquare = square, lessonLegalMoves = legal, lessonMessage = "Try your move!") }
+            }
+            return
+        }
+
+        val selected = state.lessonSelectedSquare
+        if (selected == null) {
+            val piece = state.activeLessonState.board[square]
+            if (piece != null && piece.color == state.activeLessonState.turn) {
+                val legal = ChessRules.getLegalMovesForSquare(state.activeLessonState, square)
+                _uiState.update { it.copy(lessonSelectedSquare = square, lessonLegalMoves = legal) }
+            }
+        } else {
+            val match = state.lessonLegalMoves.firstOrNull { it.to == square }
+            if (match != null) {
+                val demo = getDemoMoveForLesson(lesson.id)
+                val isCorrect = demo == null || (match.from == demo.from && match.to == demo.to)
+
+                val nextState = ChessRules.makeMove(state.activeLessonState, match)
+                if (isCorrect) {
+                    _uiState.update {
+                        it.copy(
+                            activeLessonState = nextState,
+                            lessonSelectedSquare = null,
+                            lessonLegalMoves = emptyList(),
+                            lessonMessage = "🎉 Correct! You successfully mastered ${lesson.title}!",
+                            isLessonSuccess = true
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            activeLessonState = nextState,
+                            lessonSelectedSquare = null,
+                            lessonLegalMoves = emptyList(),
+                            lessonMessage = "💡 Good try! That's a legal move. Tap 'Reset & Practice' to try the master lesson move.",
+                            isLessonSuccess = false
+                        )
+                    }
+                }
+            } else {
+                val piece = state.activeLessonState.board[square]
+                if (piece != null && piece.color == state.activeLessonState.turn) {
+                    val legal = ChessRules.getLegalMovesForSquare(state.activeLessonState, square)
+                    _uiState.update { it.copy(lessonSelectedSquare = square, lessonLegalMoves = legal) }
+                } else {
+                    _uiState.update { it.copy(lessonSelectedSquare = null, lessonLegalMoves = emptyList()) }
+                }
+            }
+        }
+    }
+
+    private fun getDemoMoveForLesson(lessonId: String): Move? {
+        return when (lessonId) {
+            "lesson_castling" -> Move(Square(4, 0), Square(6, 0), isCastling = true)
+            "lesson_en_passant" -> Move(Square(4, 4), Square(3, 5))
+            "lesson_promotion" -> Move(Square(4, 6), Square(4, 7), promotion = PieceType.QUEEN)
+            "lesson_knight_fork" -> Move(Square(2, 2), Square(3, 4))
+            "lesson_pin" -> Move(Square(1, 4), Square(2, 5))
+            "lesson_smothered_mate" -> Move(Square(5, 7), Square(4, 5))
+            else -> null
         }
     }
 

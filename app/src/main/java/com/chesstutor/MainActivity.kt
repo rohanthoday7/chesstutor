@@ -23,6 +23,8 @@ import com.chesstutor.ui.screens.home.HomeScreen
 import com.chesstutor.ui.screens.learn.LearnScreen
 import com.chesstutor.ui.screens.play.PlayScreen
 import com.chesstutor.ui.screens.profile.ProfileScreen
+import com.chesstutor.core.chess.PieceColor
+import com.chesstutor.viewmodel.GameMode
 import com.chesstutor.ui.screens.puzzles.PuzzlesScreen
 import com.chesstutor.ui.screens.social.SocialScreen
 import com.chesstutor.ui.theme.ChessDarkBg
@@ -116,9 +118,43 @@ fun MainContent(
                         onNavigateSection = { currentSection = it }
                     )
                     NavSection.PUZZLES -> PuzzlesScreen(viewModel = puzzleViewModel)
-                    NavSection.LEARN -> LearnScreen(viewModel = learnViewModel, tutorViewModel = tutorViewModel)
-                    NavSection.SOCIAL -> SocialScreen(viewModel = socialViewModel)
-                    NavSection.PROFILE -> ProfileScreen(viewModel = profileViewModel)
+                    NavSection.LEARN -> LearnScreen(
+                        viewModel = learnViewModel,
+                        tutorViewModel = tutorViewModel,
+                        onStartTutorMatch = { bot, tutor ->
+                            gameViewModel.startNewGame(
+                                mode = GameMode.VS_BOT,
+                                bot = bot,
+                                timeMinutes = 10,
+                                incrementSec = 0,
+                                playerColor = PieceColor.WHITE
+                            )
+                            gameViewModel.selectTutor(tutor)
+                            gameViewModel.toggleTutorMode(true)
+                            isInActiveGame = true
+                        },
+                        onStartOpeningPractice = { opening ->
+                            gameViewModel.startNewGame(
+                                mode = GameMode.VS_BOT,
+                                bot = com.chesstutor.core.engine.BotPersonality.ALL_BOTS[2],
+                                timeMinutes = 10,
+                                incrementSec = 0,
+                                playerColor = PieceColor.WHITE
+                            )
+                            isInActiveGame = true
+                        }
+                    )
+                    NavSection.SOCIAL -> SocialScreen(
+                        viewModel = socialViewModel,
+                        onChallengeFriend = { friend ->
+                            gameViewModel.startFriendMatch(friend)
+                            isInActiveGame = true
+                        }
+                    )
+                    NavSection.PROFILE -> ProfileScreen(
+                        viewModel = profileViewModel,
+                        onLogout = { authViewModel.logout() }
+                    )
                 }
             }
         }

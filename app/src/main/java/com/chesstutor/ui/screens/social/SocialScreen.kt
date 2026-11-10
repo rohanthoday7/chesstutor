@@ -43,6 +43,7 @@ import com.chesstutor.ui.theme.ChessTextMuted
 import com.chesstutor.ui.theme.ChessTextPrimary
 import com.chesstutor.ui.theme.ChessTextSecondary
 import com.chesstutor.ui.theme.ChessYellowAccent
+import com.chesstutor.viewmodel.FriendItem
 import com.chesstutor.viewmodel.LeaderboardCategory
 import com.chesstutor.viewmodel.SocialTab
 import com.chesstutor.viewmodel.SocialViewModel
@@ -51,6 +52,7 @@ import com.chesstutor.viewmodel.SocialViewModel
 @Composable
 fun SocialScreen(
     viewModel: SocialViewModel,
+    onChallengeFriend: (FriendItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -317,7 +319,7 @@ fun SocialScreen(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
                                     .background(Color(0xFF383531))
-                                    .clickable { /* Send game challenge */ }
+                                    .clickable { onChallengeFriend(friend) }
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
                             ) {
                                 Text(

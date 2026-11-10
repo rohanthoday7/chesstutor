@@ -6,6 +6,7 @@ import com.chesstutor.core.chess.ChessGameState
 import com.chesstutor.core.chess.ChessRules
 import com.chesstutor.core.chess.GameStatus
 import com.chesstutor.core.chess.Move
+import com.chesstutor.core.chess.PgnUtils
 import com.chesstutor.core.chess.Piece
 import com.chesstutor.core.chess.PieceColor
 import com.chesstutor.core.chess.PieceType
@@ -90,18 +91,19 @@ class GameViewModel(
         incrementSec: Int = 0,
         playerColor: PieceColor = PieceColor.WHITE
     ) {
+        val actualMode = if (mode == GameMode.PASS_AND_PLAY) GameMode.PASS_AND_PLAY else GameMode.VS_BOT
         val timeMs = timeMinutes * 60 * 1000L
         botEngine = MinimaxEngine(bot)
 
         _uiState.update {
             GameUiState(
                 gameState = ChessGameState.initial(),
-                gameMode = mode,
+                gameMode = actualMode,
                 playerColor = playerColor,
                 botPersonality = bot,
-                opponentName = if (mode == GameMode.VS_BOT) bot.name else if (mode == GameMode.ONLINE) "Online Challenger" else "Opponent",
-                opponentRating = if (mode == GameMode.VS_BOT) bot.elo else 1200,
-                opponentAvatar = if (mode == GameMode.VS_BOT) bot.avatarEmoji else "👤",
+                opponentName = if (actualMode == GameMode.VS_BOT) bot.name else "Opponent",
+                opponentRating = if (actualMode == GameMode.VS_BOT) bot.elo else 1200,
+                opponentAvatar = if (actualMode == GameMode.VS_BOT) bot.avatarEmoji else "👤",
                 whiteTimeMs = timeMs,
                 blackTimeMs = timeMs,
                 incrementMs = incrementSec * 1000L,
@@ -111,18 +113,40 @@ class GameViewModel(
 
         startClocks()
 
-        if (mode == GameMode.VS_BOT && playerColor == PieceColor.BLACK) {
+        if (actualMode == GameMode.VS_BOT && playerColor == PieceColor.BLACK) {
             triggerBotMove()
         }
+    }
+
+    fun startFriendMatch(friend: FriendItem) {
+        val timeMs = 10 * 60 * 1000L
+        val bot = BotPersonality.ALL_BOTS.minByOrNull { kotlin.math.abs(it.elo - friend.rating) } ?: BotPersonality.ALL_BOTS[1]
+        botEngine = MinimaxEngine(bot)
+
+        _uiState.update {
+            GameUiState(
+                gameState = ChessGameState.initial(),
+                gameMode = GameMode.VS_BOT,
+                playerColor = PieceColor.WHITE,
+                botPersonality = bot,
+                opponentName = friend.username,
+                opponentRating = friend.rating,
+                opponentAvatar = friend.avatarEmoji,
+                whiteTimeMs = timeMs,
+                blackTimeMs = timeMs,
+                incrementMs = 0L,
+                isFlipped = false
+            )
+        }
+        startClocks()
     }
 
     fun onSquareClicked(square: Square) {
         val state = _uiState.value
         if (state.gameState.status.isGameOver || state.isBotThinking) return
 
-        // If playing vs Bot or Online, only allow moves on player's turn
+        // If playing vs Bot, only allow moves on player's turn
         if (state.gameMode == GameMode.VS_BOT && state.gameState.turn != state.playerColor) return
-        if (state.gameMode == GameMode.ONLINE && state.gameState.turn != state.playerColor) return
 
         val selected = state.selectedSquare
 
@@ -231,8 +255,8 @@ class GameViewModel(
             archiveGame(nextGameState)
             clockJob?.cancel()
         } else {
-            // Trigger AI if against bot (only if blunder alert is not actively holding)
-            if (current.gameMode == GameMode.VS_BOT && nextGameState.turn != current.playerColor && !isBlunder) {
+            // Trigger AI if against bot
+            if (current.gameMode == GameMode.VS_BOT && nextGameState.turn != current.playerColor) {
                 triggerBotMove()
             }
         }
@@ -253,10 +277,6 @@ class GameViewModel(
 
     fun dismissTutorAlert() {
         _uiState.update { it.copy(showTutorAlert = false) }
-        val current = _uiState.value
-        if (current.gameMode == GameMode.VS_BOT && current.gameState.turn != current.playerColor && !current.gameState.status.isGameOver) {
-            triggerBotMove()
-        }
     }
 
     fun selectTutor(tutor: TutorPersonality) {

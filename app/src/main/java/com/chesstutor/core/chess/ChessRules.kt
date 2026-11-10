@@ -333,7 +333,7 @@ object ChessRules {
     fun makeMove(state: ChessGameState, move: Move): ChessGameState {
         val newBoard = state.board.copy()
         val movingPiece = newBoard[move.from] ?: throw IllegalArgumentException("No piece at ${move.from}")
-        val capturedPiece: Piece?
+        var capturedPiece: Piece? = null
 
         // Execute move on board
         newBoard[move.from] = null
@@ -354,10 +354,8 @@ object ChessRules {
             }
         }
 
-        capturedPiece = if (isEnPassantCapture) {
-            Piece(PieceType.PAWN, state.turn.opposite())
-        } else {
-            newBoard[move.to]
+        if (!isEnPassantCapture) {
+            capturedPiece = newBoard[move.to]
         }
 
         // Apply piece or promotion

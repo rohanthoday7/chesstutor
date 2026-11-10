@@ -185,20 +185,38 @@ fun PuzzlesScreen(
                 )
             }
         } else if (state.isFailed) {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
                     .background(Color(0xFFCA3431))
+                    .clickable { viewModel.retryCurrentPuzzle() }
                     .padding(16.dp),
-                contentAlignment = Alignment.Center
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "❌ That's not the best move. Try again!",
+                    text = "❌ That's not the best move.",
                     color = Color.White,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Tap here to Try Again",
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = { viewModel.retryCurrentPuzzle() },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCA3431)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Try Again", fontWeight = FontWeight.Bold)
             }
         }
 

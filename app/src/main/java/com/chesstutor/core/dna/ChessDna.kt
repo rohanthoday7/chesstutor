@@ -107,6 +107,10 @@ object ChessDnaAnalyzer {
             strengths.add("Patient and accurate endgame technique")
         }
 
+        if (strengths.isEmpty()) {
+            strengths.add("Solid fundamental awareness of piece placement")
+        }
+
         recs.add("Solve 5 daily puzzles each morning to sharpen calculation speed")
 
         return ChessDnaProfile(
